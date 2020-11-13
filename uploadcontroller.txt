@@ -1,0 +1,62 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http;
+using WebApplication2.Models;
+using System.Web.Http.Cors;
+
+namespace WebApplication2.Controllers
+{
+    [EnableCors(origins: "http://localhost:3000", headers: "*", methods: "*")]
+    public class UploadfilesController : ApiController
+    {
+        SLKHUB_DATAMODEL DB = new SLKHUB_DATAMODEL();
+        [Route("api/Uploadfile")]
+        public async Task<object> Uploadfile()
+        {
+            try
+            {
+                var fileuploadPath = "C:\\Users\\triveni g\\firstreact\\public\\Video";
+
+                var provider = new MultipartFormDataStreamProvider(fileuploadPath);
+                var content = new StreamContent(HttpContext.Current.Request.GetBufferlessInputStream(true));
+                foreach (var header in Request.Content.Headers)
+                {
+                    content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+                await content.ReadAsMultipartAsync(provider);
+                string uploadingFileName = provider.FileData.Select(x => x.LocalFileName).FirstOrDefault();
+                string originalFileName = String.Concat(fileuploadPath, "\\" + (provider.Contents[0].Headers.ContentDisposition.FileName).Trim(new Char[] { '"' }));
+                var filename = provider.Contents[0].Headers.ContentDisposition.FileName;
+                if (File.Exists(originalFileName))
+                {
+                    File.Delete(originalFileName);
+                }
+                File.Move(uploadingFileName, originalFileName);
+                Stotefile sf = new Stotefile();
+                sf.File = filename;
+                DB.Stotefiles.Add(sf);
+                DB.SaveChanges();
+                return new Response
+                {
+                    Status = "Updated",
+                    Message = "Updated Successfully"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new Response
+                {
+                    Status = "Error",
+                    Message = "Error"
+                };
+            }
+
+        }
+    }
+}
